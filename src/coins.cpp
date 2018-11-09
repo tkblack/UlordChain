@@ -87,11 +87,39 @@ CCoinsMap::const_iterator CCoinsViewCache::FetchCoins(const uint256 &txid) const
     return ret;
 }
 
+/*CCoinsMap::iterator CCoinsViewCache::FetchCoins(const COutPoint &outpoint) const {
+	CCoinsMap::const_iterator ret = FetchCoins(txid);
+	return ret;
+    CCoinsMap::iterator it = cacheCoins.find(outpoint.hash);
+    if (it != cacheCoins.end())
+        return it;
+    CCoins tmp;
+    if (!base->GetCoins(outpoint.hash, tmp))
+        return cacheCoins.end();
+    CCoinsMap::iterator ret = cacheCoins.emplace(std::piecewise_construct, std::forward_as_tuple(outpoint), std::forward_as_tuple(std::move(tmp))).first;
+    if (ret->second.coins.IsSpent()) {
+        // The parent only has an empty entry for this outpoint; we can consider our
+        // version as fresh.
+        ret->second.flags = CCoinsCacheEntry::FRESH;
+    }
+    cachedCoinsUsage += ret->second.coins.DynamicMemoryUsage();
+    return ret;
+}*/
+
 bool CCoinsViewCache::GetCoins(const uint256 &txid, CCoins &coins) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     if (it != cacheCoins.end()) {
         coins = it->second.coins;
         return true;
+    }
+    return false;
+}
+
+bool CCoinsViewCache::GetCoins(const COutPoint &outpoint, CCoins &coins) const {
+    CCoinsMap::const_iterator it = FetchCoins(outpoint.hash);
+    if (it != cacheCoins.end()) {
+        coins = it->second.coins;
+        return !coins.IsSpent();
     }
     return false;
 }
